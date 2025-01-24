@@ -19,7 +19,7 @@
 
 ## Esecuzione script python in ambiente virtuale:
     - creare ambiente virtuale "python -m venv sandbox"
-    - attivare ambiente virtuale "source sandbox/bi/activate" 
+    - attivare ambiente virtuale "source sandbox/bin/activate" 
     - eseguire script \n
     - disattivare ambiente virtuale "deactivate"
 

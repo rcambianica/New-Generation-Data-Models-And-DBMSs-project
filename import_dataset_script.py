@@ -1,33 +1,7 @@
-from neo4j import GraphDatabase, RoutingControl
+import pandas as pd
 
-#capire se con la versione free di AURADB possiamo condividere un'istanza
-#qui andranno i dati d'accesso
-URI = "neo4j://localhost:7687"
-AUTH = ("neo4j", "password")
-
-#l'oggetto che permette l'esecuzione di query neo4j è driver
-#funzione che permette la creazione e l'inserimento di un'entità nel database remoto
-def add_friend(driver, name, friend_name):
-    driver.execute_query(
-        "MERGE (a:Person {name: $name}) "
-        "MERGE (friend:Person {name: $friend_name}) "
-        "MERGE (a)-[:KNOWS]->(friend)",
-        name=name, friend_name=friend_name, database_="neo4j",
-    )
-
-
-def print_friends(driver, name):
-    records, _, _ = driver.execute_query(
-        "MATCH (a:Person)-[:KNOWS]->(friend) WHERE a.name = $name "
-        "RETURN friend.name ORDER BY friend.name",
-        name=name, database_="neo4j", routing_=RoutingControl.READ,
-    )
-    for record in records:
-        print(record["friend.name"])
-
-
-with GraphDatabase.driver(URI, auth=AUTH) as driver:
-    add_friend(driver, "Arthur", "Guinevere")
-    add_friend(driver, "Arthur", "Lancelot")
-    add_friend(driver, "Arthur", "Merlin")
-    print_friends(driver, "Arthur")
+# carica il file .pkl contenente il dataset, ora carica i rawdata presenti come esempio
+# capire se è meglio usare libreria pickle o pandas
+with open('/home/ric/Downloads/2018-09-30.pkl','rb') as f:
+    dataset = pd.read_pickle(f)
+print(dataset)
