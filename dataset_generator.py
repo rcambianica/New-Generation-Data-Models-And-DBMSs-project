@@ -1,3 +1,4 @@
+import datetime
 import numpy as np
 import pandas as pd
 import pickle
@@ -129,19 +130,23 @@ def generate_transactions_table(customer_profile, start_date, nb_days = 10):
     return customer_transactions
 
 #funzione che genera il dataset
-def generate_dataset(scelta, n_customers, n_terminals, nb_days, start_date, r):
-    
+def generate_dataset(dataset_size):
+    n_customers = 5000
+    n_terminals = 400
+    nb_days=100 
+    start_date=datetime.date.today() 
+    r=5
     start_time=time.time()
     customer_profiles_table = generate_customer_profiles_table(n_customers, random_state = 0)
     print("Time to generate customer profiles table: {0:.2}s".format(time.time()-start_time))
-    with open('dataset/dataset ' +str(scelta)+'/customers.pkl', 'wb') as f:
+    with open('dataset/dataset ' +str(dataset_size)+'/customers.pkl', 'wb') as f:
         pickle.dump(customer_profiles_table,f)
 
 
     start_time=time.time()
     terminal_profiles_table = generate_terminal_profiles_table(n_terminals, random_state = 1)
     print("Time to generate terminal profiles table: {0:.2}s".format(time.time()-start_time))
-    with open('dataset/dataset ' +str(scelta)+'/terminals.pkl', 'wb') as f:
+    with open('dataset/dataset ' +str(dataset_size)+'/terminals.pkl', 'wb') as f:
         pickle.dump(terminal_profiles_table,f)
 
     start_time=time.time()
@@ -166,7 +171,7 @@ def generate_dataset(scelta, n_customers, n_terminals, nb_days, start_date, r):
     # TRANSACTION_ID are the dataframe indices, starting from 0
     transactions_df.rename(columns = {'index':'TRANSACTION_ID'}, inplace = True)
     
-    with open('dataset/dataset ' +str(scelta)+'/transactions.pkl', 'wb') as f:
+    with open('dataset/dataset ' +str(dataset_size)+'/transactions.pkl', 'wb') as f:
         pickle.dump(transactions_df,f)
 
     

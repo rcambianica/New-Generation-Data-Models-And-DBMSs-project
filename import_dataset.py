@@ -1,3 +1,4 @@
+import time
 from neo4j import GraphDatabase
 import pickle
 
@@ -13,13 +14,17 @@ def execute_transactions(transaction_execution_commands):
     data_base_connection.close()
 
 def load_customers(file):
-    with open(file,'rb') as f:
+    start_time=time.time()
+    with open('dataset/dataset ' +str(file)+'/customers.pkl','rb') as f:
         customers = pickle.load(f)
     print(customers)
+    print("Time to import the customers: {0:.2}s".format(time.time()-start_time))
 
 def load_terminals(file):
-    with open(file, 'rb') as f:
+    start_time=time.time()
+    with open('dataset/dataset ' +str(file)+'/terminals.pkl','rb') as f:
         terminals = pickle.load(f)
+    print(terminals)
     #leggo gli attributi separatamente, altrimenti pickle converte i tipi automaticamente
     terminal_ids = terminals['TERMINAL_ID'].tolist()
     x_terminal_ids = terminals['x_terminal_id'].tolist()
@@ -32,7 +37,10 @@ def load_terminals(file):
             
     execute_transactions(transaction_execution_commands)
 
+    print("Time to import the terminals: {0:.2}s".format(time.time()-start_time))
 def load_transactions(file):
-    with open(file,'rb') as f:
+    start_time=time.time()
+    with open('dataset/dataset ' +str(file)+'/transactions.pkl','rb') as f:
         transactions = pickle.load(f)
     print(transactions)
+    print("Time to import the transactions: {0:.2}s".format(time.time()-start_time))
