@@ -29,5 +29,5 @@ https://www.youtube.com/watch?v=yluHRteVBNI https://www.youtube.com/watch?v=z4Kq
 ## Pandarallel
 Installa la libreria pandarallel.
 
-from pandarallel import pandarallel
-pandarallel.initialize(progress_bar=True) # progress_bar=True stampa la barra di completamento per ogni processo parallelo
+    from pandarallel import pandarallel
+    pandarallel.initialize(progress_bar=True) # progress_bar=True stampa la barra di completamento per ogni processo parallelo
