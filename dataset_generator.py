@@ -183,13 +183,18 @@ def generate_transactions_table(customer_profile, start_date, nb_days=10):
     return customer_transactions
 
 
+days = [70, 140, 280]
+
+
 # funzione che genera il dataset
 def generate_dataset(dataset_size):
-    n_customers = 500
-    n_terminals = 200
-    nb_days = 10
+    index = int(dataset_size)
+    n_customers = 10000
+    n_terminals = 2000
+    nb_days = days[index - 1]
+
     start_date = datetime.date.today()
-    r = 5
+    r = 20
     start_time = time.time()
     customer_profiles_table = generate_customer_profiles_table(
         n_customers, random_state=0
@@ -205,7 +210,7 @@ def generate_dataset(dataset_size):
         n_terminals, random_state=1
     )
     print(
-        "Time to generate terminal profiles table: {0:.2}s".format(
+        "Time to generate terminal profiles table: {0:.2f}s".format(
             time.time() - start_time
         )
     )
@@ -234,7 +239,7 @@ def generate_dataset(dataset_size):
     )
     print()
     print(
-        "Time to associate terminals to customers: {0:.2}s".format(
+        "Time to associate terminals to customers: {0:.2f}s".format(
             time.time() - start_time
         )
     )
@@ -260,7 +265,7 @@ def generate_dataset(dataset_size):
         .reset_index(drop=True)
     )
     print()
-    print("Time to generate transactions: {0:.2}s".format(time.time() - start_time))
+    print("Time to generate transactions: {0:.2f}s".format(time.time() - start_time))
 
     # Sort transactions chronologically
     transactions_df = transactions_df.sort_values("TX_DATETIME")
@@ -280,5 +285,10 @@ def generate_dataset(dataset_size):
 
 
     with open("dataset/dataset " + str(dataset_size) + "/transactions.pkl", "wb") as f:
-        transactions_df_list = transactions_df.to_dict(orient='records')
-        pickle.dump(transactions_df_list, f)
+        pickle.dump(transactions_df, f)
+
+    from os import stat
+
+    print(
+        f"Peso dataset: { (stat("dataset/dataset "+dataset_size+"/customers.pkl").st_size + stat("dataset/dataset "+dataset_size+"/terminals.pkl").st_size + stat("dataset/dataset "+dataset_size+"/transactions.pkl").st_size)/1000000}"
+    )
