@@ -192,6 +192,7 @@ def generate_dataset(dataset_size):
     n_customers = 10000
     n_terminals = 2000
     nb_days = days[index - 1]
+
     start_date = datetime.date.today()
     r = 20
     start_time = time.time()
@@ -203,9 +204,7 @@ def generate_dataset(dataset_size):
             time.time() - start_time
         )
     )
-    with open("dataset/dataset " + str(dataset_size) + "/customers.pkl", "wb") as f:
-        pickle.dump(customer_profiles_table, f)
-
+    
     start_time = time.time()
     terminal_profiles_table = generate_terminal_profiles_table(
         n_terminals, random_state=1
@@ -215,9 +214,7 @@ def generate_dataset(dataset_size):
             time.time() - start_time
         )
     )
-    with open("dataset/dataset " + str(dataset_size) + "/terminals.pkl", "wb") as f:
-        pickle.dump(terminal_profiles_table, f)
-
+    
     start_time = time.time()
     x_y_terminals = terminal_profiles_table[
         ["x_terminal_id", "y_terminal_id"]
@@ -277,6 +274,15 @@ def generate_dataset(dataset_size):
     transactions_df.reset_index(inplace=True)
     # TRANSACTION_ID are the dataframe indices, starting from 0
     transactions_df.rename(columns={"index": "TRANSACTION_ID"}, inplace=True)
+
+    with open("dataset/dataset " + str(dataset_size) + "/customers.pkl", "wb") as f:
+        customer_profiles_list = customer_profiles_table.to_dict(orient='records')
+        pickle.dump(customer_profiles_list, f)
+
+    with open("dataset/dataset " + str(dataset_size) + "/terminals.pkl", "wb") as f:
+        terminal_profiles_list = terminal_profiles_table.to_dict(orient='records')
+        pickle.dump(terminal_profiles_list, f)
+
 
     with open("dataset/dataset " + str(dataset_size) + "/transactions.pkl", "wb") as f:
         pickle.dump(transactions_df, f)

@@ -11,9 +11,4 @@ if __name__ == '__main__':
     #generazione delle tre tabelle
     dataset_generator.generate_dataset(dataset_size)
     
-    #carica i customers dal file .pkl e li carica su neo4j (per ora no)
-    import_dataset.load_customers(dataset_size)
-    #carica i terminals dal file .pkl e li carica su neo4j
-    import_dataset.load_terminals(dataset_size)
-    #carica le transactions dal file .pkl e li carica su neo4j (per ora no)
-    import_dataset.load_transactions(dataset_size)
+    import_dataset.insert_dataset(dataset_size)
