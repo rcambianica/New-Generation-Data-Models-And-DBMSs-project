@@ -285,7 +285,8 @@ def generate_dataset(dataset_size):
 
 
     with open("dataset/dataset " + str(dataset_size) + "/transactions.pkl", "wb") as f:
-        pickle.dump(transactions_df, f)
+        transactions_df_list = transactions_df.to_dict(orient='records')
+        pickle.dump(transactions_df_list, f)
 
     from os import stat
 

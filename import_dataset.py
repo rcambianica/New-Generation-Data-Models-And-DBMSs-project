@@ -3,8 +3,8 @@ import time
 from neo4j import GraphDatabase
 import pickle
 
-URI = "bolt://44.192.121.100"
-AUTH = ("neo4j", "parameter-earth-scratchpad")
+URI = "bolt://localhost:7687"
+AUTH = ("neo4j", "provaprova")
 driver = GraphDatabase.driver(URI, auth=AUTH)
 
 def insert_dataset(data):
@@ -12,7 +12,7 @@ def insert_dataset(data):
     insert_customers(data)
     insert_transactions(data)
 
-def load_customers_in_batch(tx, data, batch_size=1000):
+def load_customers_in_batch(tx, data, batch_size=100):
     query = """
     UNWIND $customers AS customer
     CREATE (c:Customer {
@@ -112,7 +112,6 @@ def load_transactions_in_batch(tx, data, batch_size=10000):
 
         # Esegui la query per creare i nodi e le relazioni
         tx.run(query, transactions=transactions)
-
 
 def insert_transactions(data):
     start_time = time.time()
