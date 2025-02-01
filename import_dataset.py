@@ -1,4 +1,5 @@
 from datetime import datetime
+import logging
 import time
 from neo4j import GraphDatabase
 import pickle
@@ -7,12 +8,16 @@ URI = "bolt://localhost:7687"
 AUTH = ("neo4j", "provaprova")
 driver = GraphDatabase.driver(URI, auth=AUTH)
 
+# Set up logging
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+
+
 def insert_dataset(data):
     insert_terminals(data)
-    insert_customers(data)
-    insert_transactions(data)
+    #insert_customers(data)
+    #insert_transactions(data)
 
-def load_customers_in_batch(tx, data, batch_size=100):
+def load_customers_in_batch(tx, data, batch_size=1000):
     query = """
     UNWIND $customers AS customer
     CREATE (c:Customer {
@@ -41,22 +46,26 @@ def load_customers_in_batch(tx, data, batch_size=100):
             'available_terminals': row['available_terminals']
         } for row in batch]
         
-        print(f"Processing batch {i} to {i+batch_size}")  #monitoraggio batch di terminali
-        tx.run(query, customers=customers)
-        
+        try:
+            print(f"Processing batch {i} to {i+batch_size}")
+            tx.run(query, customers=customers)
+        except Exception as e:
+            logging.error(f"Error while processing batch {i}-{i+batch_size}: {e}")
+            # Optionally retry the batch or handle specific exceptions
+
 def insert_customers(data):
     start_time = time.time()
     try:
-        # Carica il file pickle con i dati
         with open(f'dataset/dataset {data}/customers.pkl', 'rb') as f:
             customers = pickle.load(f)
-
+        customer_profiles_list = customers.to_dict(orient='records')
+        
         with driver.session() as session:
-            session.execute_write(load_customers_in_batch, customers)
-            
+            session.execute_write(load_customers_in_batch, customer_profiles_list)
         
         print(f"Tempo per importare i customers: {time.time() - start_time:.2f} s")
     except Exception as e:
+        logging.error(f"Errore durante l'importazione dei customers: {e}")
         print(f"Errore: {e}")
 
 def load_terminals_in_batch(tx, data, batch_size=1000):
@@ -67,20 +76,38 @@ def load_terminals_in_batch(tx, data, batch_size=1000):
     for i in range(0, len(data), batch_size):
         batch = data[i:i + batch_size]
         terminals = [{'terminal_id': row['TERMINAL_ID'], 'x_terminal_id': row['x_terminal_id'], 'y_terminal_id': row['y_terminal_id']} for row in batch]
-        print(f"Processing terminals batch {i} to {i + batch_size}")  # Monitoraggio batch di terminali
-        tx.run(query, terminals=terminals)
+        
+        try:
+            logging.info(f"Processing terminals batch {i} to {i + batch_size}")
+            tx.run(query, terminals=terminals)
+        except Exception as e:
+            logging.error(f"Error while processing batch {i}-{i + batch_size}: {e}")
+            # Optional retry logic for transient errors (with a delay)
+            for retry in range(3):
+                try:
+                    logging.info(f"Retrying batch {i}-{i + batch_size}, attempt {retry + 1}")
+                    tx.run(query, terminals=terminals)
+                    break
+                except Exception as retry_exception:
+                    logging.error(f"Retry {retry + 1} failed: {retry_exception}")
+                    if retry == 2:  # After 3 retries, log and move on
+                        logging.error(f"Batch {i}-{i + batch_size} failed after 3 attempts")
+                        break
+                    time.sleep(5)  # Delay before retrying
 
 def insert_terminals(data):
     start_time = time.time()
     try:
         with open(f'dataset/dataset {data}/terminals.pkl', 'rb') as f:
             terminals = pickle.load(f)
-
+        terminal_profiles_list = terminals.to_dict(orient='records')
+        
         with driver.session() as session:
-            session.execute_write(load_terminals_in_batch, terminals)
+            session.execute_write(load_terminals_in_batch, terminal_profiles_list)
             
-        print(f"Tempo per importare i terminals: {time.time() - start_time:.2f} s")
+        logging.info(f"Tempo per importare i terminals: {time.time() - start_time:.2f} s")
     except Exception as e:
+        logging.error(f"Errore durante l'importazione dei terminals: {e}")
         print(f"Errore: {e}")
 
 def load_transactions_in_batch(tx, data, batch_size=10000):
@@ -92,8 +119,8 @@ def load_transactions_in_batch(tx, data, batch_size=10000):
     MERGE (c)-[:MADE]->(t)
     MERGE (t)-[:OCCURRED_AT]->(term)
     """
-
-    # Elabora i dati in batch
+    
+    # Process data in batches
     for i in range(0, len(data), batch_size):
         batch = data[i:i + batch_size]
         transactions = [{
@@ -106,23 +133,35 @@ def load_transactions_in_batch(tx, data, batch_size=10000):
             'terminal_id': row['TERMINAL_ID']
         } for row in batch]
 
-        # Debug: Verifica se i customer_id e terminal_id sono validi
-        for transaction in transactions:
-            print(f"Transaction {transaction['transaction_id']}: customer_id={transaction['customer_id']}, terminal_id={transaction['terminal_id']}")
-
-        # Esegui la query per creare i nodi e le relazioni
-        tx.run(query, transactions=transactions)
+        try:
+            logging.info(f"Processing transactions batch {i} to {i + batch_size}")
+            tx.run(query, transactions=transactions)
+        except Exception as e:
+            logging.error(f"Error while processing batch {i}-{i + batch_size}: {e}")
+            # Optional retry logic for transient errors (with a delay)
+            for retry in range(3):
+                try:
+                    logging.info(f"Retrying batch {i}-{i + batch_size}, attempt {retry + 1}")
+                    tx.run(query, transactions=transactions)
+                    break
+                except Exception as retry_exception:
+                    logging.error(f"Retry {retry + 1} failed: {retry_exception}")
+                    if retry == 2:  # After 3 retries, log and move on
+                        logging.error(f"Batch {i}-{i + batch_size} failed after 3 attempts")
+                        break
+                    time.sleep(5)  # Delay before retrying
 
 def insert_transactions(data):
     start_time = time.time()
     try:
-        # Carica il file pickle con i dati
         with open(f'dataset/dataset {data}/transactions.pkl', 'rb') as f:
             transactions = pickle.load(f)
-
-        with driver.session() as session:
-            session.execute_write(load_transactions_in_batch, transactions)
+        transactions_df_list = transactions.to_dict(orient='records')
         
-        print(f"Tempo per importare le transactions: {time.time() - start_time:.2f} s")
+        with driver.session() as session:
+            session.execute_write(load_transactions_in_batch, transactions_df_list)
+            
+        logging.info(f"Tempo per importare le transactions: {time.time() - start_time:.2f} s")
     except Exception as e:
+        logging.error(f"Errore durante l'importazione delle transactions: {e}")
         print(f"Errore: {e}")
