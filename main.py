@@ -1,4 +1,3 @@
-import asyncio
 import import_dataset, dataset_generator
 
 if __name__ == '__main__':

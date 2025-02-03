@@ -1,8 +1,8 @@
-from datetime import datetime
 import logging
 import time
-from neo4j import GraphDatabase
 import pickle
+from neo4j import GraphDatabase
+from concurrent.futures import ThreadPoolExecutor
 
 URI = "bolt://localhost:7687"
 AUTH = ("neo4j", "provaprova")
@@ -11,18 +11,15 @@ driver = GraphDatabase.driver(URI, auth=AUTH)
 # Set up logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
-
 def create_indexes():
     with driver.session() as session:
-        session.run("CREATE INDEX FOR (c:Customer) ON (c.customer_id);")
-        session.run("CREATE INDEX FOR (t:Terminal) ON (t.terminal_id);")
-        session.run("CREATE INDEX FOR (tx:Transaction) ON (tx.transaction_id);")
+        session.run("CREATE INDEX IF NOT EXISTS FOR (c:Customer) ON (c.customer_id);")
+        session.run("CREATE INDEX IF NOT EXISTS FOR (t:Terminal) ON (t.terminal_id);")
+        session.run("CREATE INDEX IF NOT EXISTS FOR (tx:Transaction) ON (tx.transaction_id);")
     logging.info("Indexes created successfully.")
 
-from concurrent.futures import ThreadPoolExecutor
-
 def insert_dataset(data):
-    #create_indexes() 
+    create_indexes() 
     insert_terminals(data)
     insert_customers(data)
     insert_transactions(data)
@@ -32,22 +29,22 @@ def insert_dataset(data):
       #  executor.submit(insert_customers, data)
        # executor.submit(insert_transactions, data)
 
-
 def load_customers_in_batch(tx, data, batch_size=1000):
     query = """
     UNWIND $customers AS customer
     MERGE (c:Customer {customer_id: customer.customer_id})
-    ON CREATE SET
+    ON CREATE SET 
         c.x_customer_id = customer.x_customer_id,
         c.y_customer_id = customer.y_customer_id,
         c.mean_amount = customer.mean_amount,
         c.std_amount = customer.std_amount,
         c.mean_nb_tx_per_day = customer.mean_nb_tx_per_day
-    
+
     WITH c, customer.available_terminals AS terminals
     UNWIND terminals AS terminal_id
-    MERGE (t:Terminal {terminal_id: terminal_id})
-    MERGE (c)-[:CAN_USE]->(t);
+
+    MATCH (t:Terminal {terminal_id: terminal_id})  // Supponiamo che i terminal esistano già
+    CREATE (c)-[:CAN_USE]->(t);
     """
     
     for i in range(0, len(data), batch_size):
@@ -117,7 +114,7 @@ def insert_terminals(data):
         logging.error(f"Errore durante l'importazione dei terminals: {e}")
         print(f"Errore: {e}")
 
-def load_transactions_in_batch(tx, data, batch_size=1000):
+def load_transactions_in_batch(tx, data, batch_size=10000):
     query = """
         UNWIND $transactions AS transaction
         CREATE (t:Transaction {
@@ -130,8 +127,8 @@ def load_transactions_in_batch(tx, data, batch_size=1000):
         WITH t, transaction  
         MATCH (c:Customer {customer_id: transaction.customer_id})
         MATCH (term:Terminal {terminal_id: transaction.terminal_id})
-        CREATE (c)-[:MADE]->(t)
-        CREATE (t)-[:OCCURRED_AT]->(term)
+        CREATE (c)-[:MAKES]->(t)
+        CREATE (t)-[:OCCURS_AT]->(term)
     """
     
     for i in range(0, len(data), batch_size):
