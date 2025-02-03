@@ -14,23 +14,23 @@ logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(
 
 def insert_dataset(data):
     insert_terminals(data)
-    #insert_customers(data)
-    #insert_transactions(data)
+    insert_customers(data)
+    insert_transactions(data)
 
 def load_customers_in_batch(tx, data, batch_size=1000):
     query = """
     UNWIND $customers AS customer
-    CREATE (c:Customer {
-        customer_id: customer.customer_id,
-        x_customer_id: customer.x_customer_id,
-        y_customer_id: customer.y_customer_id,
-        mean_amount: customer.mean_amount,
-        std_amount: customer.std_amount,
-        mean_nb_tx_per_day: customer.mean_nb_tx_per_day
-    })
+    MERGE (c:Customer {customer_id: customer.customer_id})
+    ON CREATE SET
+        c.x_customer_id = customer.x_customer_id,
+        c.y_customer_id = customer.y_customer_id,
+        c.mean_amount = customer.mean_amount,
+        c.std_amount = customer.std_amount,
+        c.mean_nb_tx_per_day = customer.mean_nb_tx_per_day
+    
     WITH c, customer.available_terminals AS terminals
     UNWIND terminals AS terminal_id
-    MATCH (t:Terminal {terminal_id: terminal_id})
+    MERGE (t:Terminal {terminal_id: terminal_id})
     MERGE (c)-[:CAN_USE]->(t);
     """
     
@@ -47,17 +47,18 @@ def load_customers_in_batch(tx, data, batch_size=1000):
         } for row in batch]
         
         try:
-            print(f"Processing batch {i} to {i+batch_size}")
+            logging.info(f"Processing customers batch {i} to {i + batch_size}")
             tx.run(query, customers=customers)
         except Exception as e:
-            logging.error(f"Error while processing batch {i}-{i+batch_size}: {e}")
-            # Optionally retry the batch or handle specific exceptions
+            logging.error(f"Error while processing batch {i}-{i + batch_size}: {e}")
+
 
 def insert_customers(data):
     start_time = time.time()
     try:
         with open(f'dataset/dataset {data}/customers.pkl', 'rb') as f:
             customers = pickle.load(f)
+        print(customers)
         customer_profiles_list = customers.to_dict(orient='records')
         
         with driver.session() as session:
@@ -71,8 +72,12 @@ def insert_customers(data):
 def load_terminals_in_batch(tx, data, batch_size=1000):
     query = """
     UNWIND $terminals AS terminal
-    CREATE (t:Terminal {terminal_id: terminal.terminal_id, x_terminal_id: terminal.x_terminal_id, y_terminal_id: terminal.y_terminal_id})
+    MERGE (t:Terminal {terminal_id: terminal.terminal_id})
+    ON CREATE SET
+        t.x_terminal_id = terminal.x_terminal_id,
+        t.y_terminal_id = terminal.y_terminal_id
     """
+    
     for i in range(0, len(data), batch_size):
         batch = data[i:i + batch_size]
         terminals = [{'terminal_id': row['TERMINAL_ID'], 'x_terminal_id': row['x_terminal_id'], 'y_terminal_id': row['y_terminal_id']} for row in batch]
@@ -82,18 +87,6 @@ def load_terminals_in_batch(tx, data, batch_size=1000):
             tx.run(query, terminals=terminals)
         except Exception as e:
             logging.error(f"Error while processing batch {i}-{i + batch_size}: {e}")
-            # Optional retry logic for transient errors (with a delay)
-            for retry in range(3):
-                try:
-                    logging.info(f"Retrying batch {i}-{i + batch_size}, attempt {retry + 1}")
-                    tx.run(query, terminals=terminals)
-                    break
-                except Exception as retry_exception:
-                    logging.error(f"Retry {retry + 1} failed: {retry_exception}")
-                    if retry == 2:  # After 3 retries, log and move on
-                        logging.error(f"Batch {i}-{i + batch_size} failed after 3 attempts")
-                        break
-                    time.sleep(5)  # Delay before retrying
 
 def insert_terminals(data):
     start_time = time.time()
@@ -113,14 +106,21 @@ def insert_terminals(data):
 def load_transactions_in_batch(tx, data, batch_size=10000):
     query = """
     UNWIND $transactions AS transaction
-    MERGE (t:Transaction {transaction_id: transaction.transaction_id, tx_datetime: transaction.tx_datetime, tx_amount: transaction.tx_amount, tx_time_seconds: transaction.tx_time_seconds, tx_time_days: transaction.tx_time_days})
+    MERGE (t:Transaction {transaction_id: transaction.transaction_id})
+    ON CREATE SET
+        t.tx_datetime = transaction.tx_datetime,
+        t.tx_amount = transaction.tx_amount,
+        t.tx_time_seconds = transaction.tx_time_seconds,
+        t.tx_time_days = transaction.tx_time_days
+
     WITH t, transaction.customer_id AS customer_id, transaction.terminal_id AS terminal_id
-    MATCH (c:Customer {customer_id: customer_id}), (term:Terminal {terminal_id: terminal_id})
+    MERGE (c:Customer {customer_id: customer_id})
+    MERGE (term:Terminal {terminal_id: terminal_id})
+    
     MERGE (c)-[:MADE]->(t)
     MERGE (t)-[:OCCURRED_AT]->(term)
     """
     
-    # Process data in batches
     for i in range(0, len(data), batch_size):
         batch = data[i:i + batch_size]
         transactions = [{
@@ -138,18 +138,6 @@ def load_transactions_in_batch(tx, data, batch_size=10000):
             tx.run(query, transactions=transactions)
         except Exception as e:
             logging.error(f"Error while processing batch {i}-{i + batch_size}: {e}")
-            # Optional retry logic for transient errors (with a delay)
-            for retry in range(3):
-                try:
-                    logging.info(f"Retrying batch {i}-{i + batch_size}, attempt {retry + 1}")
-                    tx.run(query, transactions=transactions)
-                    break
-                except Exception as retry_exception:
-                    logging.error(f"Retry {retry + 1} failed: {retry_exception}")
-                    if retry == 2:  # After 3 retries, log and move on
-                        logging.error(f"Batch {i}-{i + batch_size} failed after 3 attempts")
-                        break
-                    time.sleep(5)  # Delay before retrying
 
 def insert_transactions(data):
     start_time = time.time()

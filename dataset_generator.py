@@ -194,7 +194,7 @@ def generate_dataset(dataset_size):
     nb_days = days[index - 1]
 
     start_date = datetime.date.today()
-    r = 20
+    r = 5
     start_time = time.time()
     customer_profiles_table = generate_customer_profiles_table(
         n_customers, random_state=0
