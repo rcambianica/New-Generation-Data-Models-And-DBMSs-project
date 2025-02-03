@@ -2,11 +2,14 @@ import datetime
 import numpy as np
 import pandas as pd
 import pickle
-import time
-import random
 from pandarallel import pandarallel
 
+import time
+
+import random
+
 pandarallel.initialize(progress_bar=True)
+
 
 # funzione che genera la tabella dei customers
 def generate_customer_profiles_table(n_customers, random_state=0):
@@ -51,6 +54,7 @@ def generate_customer_profiles_table(n_customers, random_state=0):
 
     return customer_profiles_table
 
+
 # funzione che genera la tabella dei terminals
 def generate_terminal_profiles_table(n_terminals, random_state=0):
 
@@ -73,6 +77,7 @@ def generate_terminal_profiles_table(n_terminals, random_state=0):
 
     return terminal_profiles_table
 
+
 # funzione che associa i customers con i terminals
 def get_list_terminals_within_radius(customer_profile, x_y_terminals, r):
 
@@ -94,6 +99,7 @@ def get_list_terminals_within_radius(customer_profile, x_y_terminals, r):
 
     # Return the list of terminal IDs
     return available_terminals
+
 
 # funzione che genera le transactions
 def generate_transactions_table(customer_profile, start_date, nb_days=10):
@@ -176,7 +182,9 @@ def generate_transactions_table(customer_profile, start_date, nb_days=10):
 
     return customer_transactions
 
-days = [110]
+
+days = [120, 265, 537]
+
 
 # funzione che genera il dataset
 def generate_dataset(dataset_size):

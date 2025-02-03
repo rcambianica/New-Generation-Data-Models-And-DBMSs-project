@@ -114,7 +114,8 @@ def insert_terminals(data):
         logging.error(f"Errore durante l'importazione dei terminals: {e}")
         print(f"Errore: {e}")
 
-def load_transactions_in_batch(tx, data, batch_size=10000):
+
+def load_transactions_in_batch(tx, transactions):
     query = """
         UNWIND $transactions AS transaction
         CREATE (t:Transaction {
@@ -130,35 +131,39 @@ def load_transactions_in_batch(tx, data, batch_size=10000):
         CREATE (c)-[:MAKES]->(t)
         CREATE (t)-[:OCCURS_AT]->(term)
     """
-    
-    for i in range(0, len(data), batch_size):
-        batch = data[i:i + batch_size]
-        transactions = [{
-            'transaction_id': row['TRANSACTION_ID'],
-            'tx_datetime': row['TX_DATETIME'],
-            'tx_amount': row['TX_AMOUNT'],
-            'tx_time_seconds': row['TX_TIME_SECONDS'],
-            'tx_time_days': row['TX_TIME_DAYS'],
-            'customer_id': row['CUSTOMER_ID'],
-            'terminal_id': row['TERMINAL_ID']
-        } for row in batch]
+    try:
+        tx.run(query, transactions=transactions)
+    except Exception as e:
+        logging.error(f"Errore durante l'inserimento del batch: {e}")
 
-        try:
-            logging.info(f"Processing transactions batch {i} to {i + batch_size}")
-            tx.run(query, transactions=transactions)
-        except Exception as e:
-            logging.error(f"Error while processing batch {i}-{i + batch_size}: {e}")
-
-def insert_transactions(data):
+def insert_transactions(data, batch_size=5000):
+    """Carica le transazioni in Neo4J in batch"""
     start_time = time.time()
+
     try:
         with open(f'dataset/dataset {data}/transactions.pkl', 'rb') as f:
             transactions = pickle.load(f)
-        transactions_df_list = transactions.to_dict(orient='records')
+
+        transactions_list = transactions.to_dict(orient='records')
         
         with driver.session() as session:
-            session.execute_write(load_transactions_in_batch, transactions_df_list)
-            
+            for i in range(0, len(transactions_list), batch_size):
+                batch = transactions_list[i:i + batch_size]
+                
+                # Convertiamo i dati nel formato corretto per Neo4J
+                transactions_batch = [{
+                    'transaction_id': row['TRANSACTION_ID'],
+                    'tx_datetime': row['TX_DATETIME'],
+                    'tx_amount': row['TX_AMOUNT'],
+                    'tx_time_seconds': row['TX_TIME_SECONDS'],
+                    'tx_time_days': row['TX_TIME_DAYS'],
+                    'customer_id': row['CUSTOMER_ID'],
+                    'terminal_id': row['TERMINAL_ID']
+                } for row in batch]
+
+                logging.info(f"Processing batch {i} - {i + batch_size}...")
+                session.execute_write(load_transactions_in_batch, transactions_batch)
+
         logging.info(f"Tempo per importare le transactions: {time.time() - start_time:.2f} s")
     except Exception as e:
         logging.error(f"Errore durante l'importazione delle transactions: {e}")
