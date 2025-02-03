@@ -183,14 +183,14 @@ def generate_transactions_table(customer_profile, start_date, nb_days=10):
     return customer_transactions
 
 
-days = [70, 140, 280]
+days = [110]
 
 
 # funzione che genera il dataset
 def generate_dataset(dataset_size):
     index = int(dataset_size)
-    n_customers = 10000
-    n_terminals = 2000
+    n_customers = 5000
+    n_terminals = 10000
     nb_days = days[index - 1]
 
     start_date = datetime.date.today()

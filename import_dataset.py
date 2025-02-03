@@ -12,10 +12,26 @@ driver = GraphDatabase.driver(URI, auth=AUTH)
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
 
+def create_indexes():
+    with driver.session() as session:
+        session.run("CREATE INDEX FOR (c:Customer) ON (c.customer_id);")
+        session.run("CREATE INDEX FOR (t:Terminal) ON (t.terminal_id);")
+        session.run("CREATE INDEX FOR (tx:Transaction) ON (tx.transaction_id);")
+    logging.info("Indexes created successfully.")
+
+from concurrent.futures import ThreadPoolExecutor
+
 def insert_dataset(data):
+    #create_indexes() 
     insert_terminals(data)
     insert_customers(data)
     insert_transactions(data)
+
+    #with ThreadPoolExecutor(max_workers=6) as executor:
+     #   executor.submit(insert_terminals, data)
+      #  executor.submit(insert_customers, data)
+       # executor.submit(insert_transactions, data)
+
 
 def load_customers_in_batch(tx, data, batch_size=1000):
     query = """
@@ -52,13 +68,11 @@ def load_customers_in_batch(tx, data, batch_size=1000):
         except Exception as e:
             logging.error(f"Error while processing batch {i}-{i + batch_size}: {e}")
 
-
 def insert_customers(data):
     start_time = time.time()
     try:
         with open(f'dataset/dataset {data}/customers.pkl', 'rb') as f:
             customers = pickle.load(f)
-        print(customers)
         customer_profiles_list = customers.to_dict(orient='records')
         
         with driver.session() as session:
@@ -103,22 +117,21 @@ def insert_terminals(data):
         logging.error(f"Errore durante l'importazione dei terminals: {e}")
         print(f"Errore: {e}")
 
-def load_transactions_in_batch(tx, data, batch_size=10000):
+def load_transactions_in_batch(tx, data, batch_size=1000):
     query = """
-    UNWIND $transactions AS transaction
-    MERGE (t:Transaction {transaction_id: transaction.transaction_id})
-    ON CREATE SET
-        t.tx_datetime = transaction.tx_datetime,
-        t.tx_amount = transaction.tx_amount,
-        t.tx_time_seconds = transaction.tx_time_seconds,
-        t.tx_time_days = transaction.tx_time_days
-
-    WITH t, transaction.customer_id AS customer_id, transaction.terminal_id AS terminal_id
-    MERGE (c:Customer {customer_id: customer_id})
-    MERGE (term:Terminal {terminal_id: terminal_id})
-    
-    MERGE (c)-[:MADE]->(t)
-    MERGE (t)-[:OCCURRED_AT]->(term)
+        UNWIND $transactions AS transaction
+        CREATE (t:Transaction {
+            transaction_id: transaction.transaction_id, 
+            tx_datetime: transaction.tx_datetime,
+            tx_amount: transaction.tx_amount,
+            tx_time_seconds: transaction.tx_time_seconds,
+            tx_time_days: transaction.tx_time_days
+        })
+        WITH t, transaction  
+        MATCH (c:Customer {customer_id: transaction.customer_id})
+        MATCH (term:Terminal {terminal_id: transaction.terminal_id})
+        CREATE (c)-[:MADE]->(t)
+        CREATE (t)-[:OCCURRED_AT]->(term)
     """
     
     for i in range(0, len(data), batch_size):
