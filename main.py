@@ -1,4 +1,4 @@
-import import_dataset, dataset_generator
+import import_dataset, dataset_generator, queries
 
 if __name__ == '__main__':
     print("- GENERAZIONE DATASET -")
@@ -8,7 +8,12 @@ if __name__ == '__main__':
     print("Inserire la scelta: ")
     dataset_size = input()
 
-    #generazione delle tre tabelle
-    dataset_generator.generate_dataset(dataset_size)
-    import_dataset.insert_dataset(dataset_size)
+    #dataset_generator.generate_dataset(dataset_size)
+
+    #import_dataset.insert_dataset(dataset_size)
+
+    #queries.query_a()
+    #queries.query_b()
+    #queries.query_c()
+    #queries.query_d()
     

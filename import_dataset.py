@@ -24,11 +24,6 @@ def insert_dataset(data):
     insert_customers(data)
     insert_transactions(data)
 
-    #with ThreadPoolExecutor(max_workers=6) as executor:
-     #   executor.submit(insert_terminals, data)
-      #  executor.submit(insert_customers, data)
-       # executor.submit(insert_transactions, data)
-
 def load_customers_in_batch(tx, data, batch_size=1000):
     query = """
     UNWIND $customers AS customer
@@ -43,7 +38,7 @@ def load_customers_in_batch(tx, data, batch_size=1000):
     WITH c, customer.available_terminals AS terminals
     UNWIND terminals AS terminal_id
 
-    MATCH (t:Terminal {terminal_id: terminal_id})  // Supponiamo che i terminal esistano già
+    MATCH (t:Terminal {terminal_id: terminal_id})
     CREATE (c)-[:CAN_USE]->(t);
     """
     
@@ -75,10 +70,9 @@ def insert_customers(data):
         with driver.session() as session:
             session.execute_write(load_customers_in_batch, customer_profiles_list)
         
-        print(f"Tempo per importare i customers: {time.time() - start_time:.2f} s")
+        print(f"Time to import customers: {time.time() - start_time:.2f} s")
     except Exception as e:
-        logging.error(f"Errore durante l'importazione dei customers: {e}")
-        print(f"Errore: {e}")
+        logging.error(f"Error during customer import: {e}")
 
 def load_terminals_in_batch(tx, data, batch_size=1000):
     query = """
@@ -109,10 +103,9 @@ def insert_terminals(data):
         with driver.session() as session:
             session.execute_write(load_terminals_in_batch, terminal_profiles_list)
             
-        logging.info(f"Tempo per importare i terminals: {time.time() - start_time:.2f} s")
+        logging.info(f"Time to import terminals: {time.time() - start_time:.2f} s")
     except Exception as e:
-        logging.error(f"Errore durante l'importazione dei terminals: {e}")
-        print(f"Errore: {e}")
+        logging.error(f"Error during terminal import: {e}")
 
 
 def load_transactions_in_batch(tx, transactions):
@@ -134,10 +127,10 @@ def load_transactions_in_batch(tx, transactions):
     try:
         tx.run(query, transactions=transactions)
     except Exception as e:
-        logging.error(f"Errore durante l'inserimento del batch: {e}")
+        logging.error(f"Error during batch insertion: {e}")
 
 def insert_transactions(data, batch_size=5000):
-    """Carica le transazioni in Neo4J in batch"""
+    """Load transactions into Neo4j in batches"""
     start_time = time.time()
 
     try:
@@ -150,7 +143,6 @@ def insert_transactions(data, batch_size=5000):
             for i in range(0, len(transactions_list), batch_size):
                 batch = transactions_list[i:i + batch_size]
                 
-                # Convertiamo i dati nel formato corretto per Neo4J
                 transactions_batch = [{
                     'transaction_id': row['TRANSACTION_ID'],
                     'tx_datetime': row['TX_DATETIME'],
@@ -164,7 +156,6 @@ def insert_transactions(data, batch_size=5000):
                 logging.info(f"Processing batch {i} - {i + batch_size}...")
                 session.execute_write(load_transactions_in_batch, transactions_batch)
 
-        logging.info(f"Tempo per importare le transactions: {time.time() - start_time:.2f} s")
+        logging.info(f"Time to import transactions: {time.time() - start_time:.2f} s")
     except Exception as e:
-        logging.error(f"Errore durante l'importazione delle transactions: {e}")
-        print(f"Errore: {e}")
+        logging.error(f"Error during transaction import: {e}")
