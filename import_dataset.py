@@ -11,6 +11,7 @@ driver = GraphDatabase.driver(URI, auth=AUTH)
 # Set up logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
+# creates indexes (if not exists) for improving queries execution
 def create_indexes():
     with driver.session() as session:
         session.run("CREATE INDEX IF NOT EXISTS FOR (c:Customer) ON (c.customer_id);")
@@ -106,7 +107,6 @@ def insert_terminals(data):
         logging.info(f"Time to import terminals: {time.time() - start_time:.2f} s")
     except Exception as e:
         logging.error(f"Error during terminal import: {e}")
-
 
 def load_transactions_in_batch(tx, transactions):
     query = """

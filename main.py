@@ -6,13 +6,14 @@ if __name__ == "__main__":
     print("2 - dataset da 100 Mbyte")
     print("3 - dataset da 200 Mbyte")
     print("Inserire la scelta: ")
-    dataset_size = input()
+    #dataset_size = input()
 
-    # dataset_generator.generate_dataset(dataset_size)
+    # generates the three tables (terminals, customers and transactions) and saves in three .pkl files
+    #dataset_generator.generate_dataset(dataset_size)
+    # imports the dataset into the database
+    #import_dataset.insert_dataset(dataset_size)
 
-    # import_dataset.insert_dataset(dataset_size)
-
-    # queries.query_a()
+    queries.query_a()
     # queries.query_b()
     # queries.query_c()
     # queries.query_d()

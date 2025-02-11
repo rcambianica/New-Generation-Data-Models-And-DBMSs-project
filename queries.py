@@ -14,6 +14,7 @@ logging.basicConfig(
 
 
 def query_a():
+    # explanation of the query in the report
     query = """
         MATCH (c1:Customer)-[:MAKES]->(t1:Transaction)-[:OCCURS_AT]->(term:Terminal)
         MATCH (c2:Customer)-[:MAKES]->(t2:Transaction)-[:OCCURS_AT]->(term)
@@ -30,13 +31,15 @@ def query_a():
 
     try:
         logging.info("Processing query A")
+        # execution of the query on the database through the usage of a driver session
         with driver.session() as session:
             result = session.run(query)
             data = result.data()
 
         logging.info(f"Query A executed successfully")
-        file_path = "A.csv"
+        file_path = "query_results/A.csv"
 
+        #writing query results in a .csv file
         with open(file_path, mode="w", newline="") as file:
             writer = csv.writer(file)
             writer.writerow(
@@ -69,64 +72,66 @@ def query_a():
     logging.info(f"Execution time for query A: {execution_time:.2f} s")
     driver.close()
 
-
 def query_b():
+    # explanation of the query in the report
     query = """
-        MATCH (t:Transaction)-[:OCCURS_AT]-(term:Terminal)
-        WHERE (date().year = t.tx_datetime.year AND date().month - t.tx_datetime.month = 1)
-        OR (date().month = 1 AND t.tx_datetime.month = 12 AND t.tx_datetime.year = date().year -1)
-        WITH term.terminal_id AS term_id, avg(t.tx_amount) AS prev_month_avg
-        MATCH (t2:Transaction)-[:OCCURS_AT]-(term{terminal_id:term_id})
-        WHERE (t2.tx_datetime.year = date().year AND t2.tx_datetime.month = date().month) AND t2.tx_amount > 1.2*prev_month_avg
-        WITH t2, term_id, prev_month_avg, t2.transaction_id as fraud_tx_id, t2.tx_amount as tx_amount
-        SET t2.fraudolent = TRUE
+        // Calcola la media delle transazioni del mese scorso per ogni terminale
+        MATCH (t:Transaction)-[:OCCURS_AT]->(term:Terminal)
+        WHERE (
+            (t.tx_datetime.year = date().year AND t.tx_datetime.month = date().month - 1)  // Mese precedente nello stesso anno
+            OR (date().month = 1 AND t.tx_datetime.year = date().year - 1 AND t.tx_datetime.month = 12)  // Gestisce gennaio-dicembre
+        )
+        WITH term.terminal_id AS term_id, AVG(t.tx_amount) AS prev_month_avg
+
+        // Identifica le transazioni fraudolente nel mese corrente
+        MATCH (t2:Transaction)-[:OCCURS_AT]->(term:Terminal)
+        WHERE term.terminal_id = term_id 
+        AND t2.tx_datetime.year = date().year 
+        AND t2.tx_datetime.month = date().month
+        AND t2.tx_amount > 1.2 * prev_month_avg
+        SET t2.fraudulent = TRUE
+        RETURN term_id, t2.transaction_id AS fraud_tx_id, t2.tx_amount AS tx_amount, prev_month_avg
     """
+
     start_time = time.time()
 
     try:
         logging.info("Processing query B")
+        # execution of the query on the database through the usage of a driver session
         with driver.session() as session:
             result = session.run(query)
             data = result.data()
 
-        logging.info(f"Query B executed successfully")
-    #     file_path = "B.csv"
+        logging.info("Query B executed successfully")
 
-    #     with open(file_path, mode="w", newline="") as file:
-    #         writer = csv.writer(file)
-    #         writer.writerow(
-    #             [
-    #                 "Terminal_id",
-    #                 "Id_fradudolent_transaction",
-    #                 "Fraudolent_transaction_amount",
-    #                 "Avg_previous_month",
-    #             ]
-    #         )
+        #writing query results in a .csv file
+        file_path = "query_results/B.csv"
+        with open(file_path, mode="w", newline="") as file:
+            writer = csv.writer(file)
+            writer.writerow(["Terminal_id", "Fraudulent_Transaction_ID", "Transaction_Amount", "Previous_Month_Avg"])
 
-    #         for row in data:
-    #             writer.writerow(
-    #                 [
-    #                     row["term_id"],
-    #                     row["fraud_tx_id"],
-    #                     f"{row['tx_amount']:.2f}",
-    #                     f"{row['prev_month_avg']:.2f}",
-    #                 ]
-    #             )
+            for row in data:
+                writer.writerow([
+                    row["term_id"],
+                    row["fraud_tx_id"],
+                    f"{row['tx_amount']:.2f}",
+                    f"{row['prev_month_avg']:.2f}"
+                ])
 
-    #     logging.info("Results written to B.csv")
+        logging.info(f"Results written to {file_path}")
 
     except Exception as e:
         logging.error(f'Error "{e}" while processing query B')
 
     execution_time = time.time() - start_time
     logging.info(f"Execution time for query B: {execution_time:.2f} s")
-    driver.close()
 
+    driver.close()
 
 # def query_c():
 
-
 def query_d():
+    # explanation of the query in the report
     query = """
         MATCH (t:Transaction)
         WITH t, datetime(t.tx_datetime).hour AS hour
@@ -145,9 +150,12 @@ def query_d():
 
     try:
         logging.info("Processing query d")
+        # execution of the query on the database through the usage of a driver session
         with driver.session() as session:
             session.run(query)
+
         logging.info(f"Query D executed successfully")
+
     except Exception as e:
         logging.error(f'Error "{e}" while processing query D')
 
@@ -155,9 +163,8 @@ def query_d():
     logging.info(f"Execution time for query d: {execution_time:.2f} s")
     driver.close()
 
-
 def query_d_2_batch(tx, data, batch_size=5000):
-
+    # explanation of the query in the report
     query = """
         UNWIND $customers AS pair
         MATCH (c1:Customer {customer_id: pair.c1_id})
@@ -178,9 +185,8 @@ def query_d_2_batch(tx, data, batch_size=5000):
                 f"Error while processing buying friends relationship batch {i}-{i + batch_size}: {e}"
             )
 
-
 def query_d_2():
-    start_time = time.time()
+    # explanation of the query in the report
     query = """
         MATCH (c1:Customer)-[:MAKES]->(t1:Transaction)-[:OCCURS_AT]->(term:Terminal),
               (c2:Customer)-[:MAKES]->(t2:Transaction)-[:OCCURS_AT]->(term)
@@ -196,6 +202,7 @@ def query_d_2():
     try:
         logging.info("Processing query D 2")
         with driver.session() as session:
+            # execution of the query on the database through the usage of a driver session
             result = session.run(query)
             data = result.data()
 
@@ -203,50 +210,55 @@ def query_d_2():
             session.execute_write(query_d_2_batch, data)
 
         logging.info(f"Time to create relationships: {time.time() - start_time:.2f} s")
+    
     except Exception as e:
         logging.error(f"Error during relationships creation: {e}")
-
+    driver.close()
 
 def query_e():
+    # explanation of the query in the report
     query = """
         MATCH (t:Transaction)
-        WITH t.period_of_day as period, COUNT(t) as num_transactions_per_period
-        MATCH (tf:Transaction{fraudolent:TRUE})
-        WHERE tf.period_of_day = period
-        WITH period, num_transactions_per_period, COUNT(tf) as num_fraudolent_transactions_per_period
-        RETURN period, num_transactions_per_period, num_fraudolent_transactions_per_period*1.0/num_transactions_per_period as average_number_of_fraud_transactions
+        WITH t.period_of_day AS period, 
+             COUNT(t) AS num_transactions_per_period,
+             COUNT(CASE WHEN t.fraudulent = TRUE THEN 1 ELSE NULL END) AS num_fraud_transactions
+        RETURN period, 
+               num_transactions_per_period, 
+               num_fraud_transactions, 
+               CASE 
+                   WHEN num_transactions_per_period > 0 
+                   THEN num_fraud_transactions * 1.0 / num_transactions_per_period 
+                   ELSE 0 
+               END AS fraud_rate
+        ORDER BY period
     """
+
     start_time = time.time()
 
     try:
         logging.info("Processing query E")
+        # execution of the query on the database through the usage of a driver session
         with driver.session() as session:
             result = session.run(query)
             data = result.data()
 
-        logging.info(f"Query E executed successfully")
-        file_path = "E.csv"
+        logging.info("Query E executed successfully")
 
+        #writing query results in a .csv file
+        file_path = "query_results/E.csv"
         with open(file_path, mode="w", newline="") as file:
             writer = csv.writer(file)
-            writer.writerow(
-                [
-                    "Period",
-                    "Num_transactions_per_period",
-                    "Average_num_of_fraud_transactions",
-                ]
-            )
+            writer.writerow(["Period", "Num_Transactions", "Num_Fraud_Transactions", "Fraud_Rate"])
 
             for row in data:
-                writer.writerow(
-                    [
-                        row["period"],
-                        row["num_transactions_per_period"],
-                        f"{row['average_number_of_fraud_transactions']:.2f}",
-                    ]
-                )
+                writer.writerow([
+                    row["period"],
+                    row["num_transactions_per_period"],
+                    row["num_fraud_transactions"],
+                    f"{row['fraud_rate']:.4f}"
+                ])
 
-        logging.info("Results written to E.csv")
+        logging.info(f"Results written to {file_path}")
 
     except Exception as e:
         logging.error(f'Error "{e}" while processing query E')
