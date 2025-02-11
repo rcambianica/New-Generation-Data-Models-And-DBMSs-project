@@ -6,7 +6,7 @@ if __name__ == "__main__":
     print("2 - dataset da 100 Mbyte")
     print("3 - dataset da 200 Mbyte")
     print("Inserire la scelta: ")
-    # dataset_size = input()
+    dataset_size = input()
 
     # dataset_generator.generate_dataset(dataset_size)
 
@@ -16,5 +16,5 @@ if __name__ == "__main__":
     # queries.query_b()
     # queries.query_c()
     # queries.query_d()
-    # queries.query_2_d()
-    queries.query_e()
+    # queries.query_d_2()
+    # queries.query_e()
