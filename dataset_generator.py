@@ -193,7 +193,7 @@ def generate_dataset(dataset_selection):
     n_terminals = 10000
     nb_days = days[index - 1]
 
-    start_date = datetime.date.today()
+    start_date = "2025-01-01 00:00:00"
     r = 5
     start_time = time.time()
     customer_profiles_table = generate_customer_profiles_table(

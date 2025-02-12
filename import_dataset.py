@@ -23,10 +23,9 @@ def create_indexes():
 
 def insert_dataset(dataset_selection):
     create_indexes()
-    with ThreadPoolExecutor() as executor:
-        executor.submit(insert_terminals, dataset_selection)
-        executor.submit(insert_customers, dataset_selection)
-        executor.submit(insert_transactions, dataset_selection)
+    insert_terminals(dataset_selection)
+    insert_customers(dataset_selection)
+    insert_transactions(dataset_selection)
 
 
 def load_customers_in_batch(tx, data, batch_size=5000):
@@ -173,11 +172,4 @@ def insert_transactions(dataset_selection, batch_size=5000):
         logging.info(f"Transactions imported in {time.time() - start_time:.2f} s")
     except Exception as e:
         logging.error(f"Error during transaction import: {e}")
-
-
-# 🔹 Chiude il driver in modo sicuro
-try:
-    insert_dataset(1)  # Sostituisci con il dataset desiderato
-finally:
     driver.close()
-    logging.info("Neo4j driver closed.")

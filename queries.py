@@ -77,7 +77,7 @@ def query_b():
     query = """
         MATCH (t:Transaction)-[:OCCURS_AT]->(term:Terminal)
         WHERE ((t.datetime.year = date().year AND t.datetime.month = date().month - 1)
-        OR (date().month = 1 AND t.datetime.month = 12 AND t.datetime.year = date().year -1))
+                OR (date().month = 1 AND t.datetime.month = 12 AND t.datetime.year = date().year -1))
         WITH term.id AS term_id, AVG(t.amount) AS prev_month_avg
         MATCH (t2:Transaction)-[:OCCURS_AT]->(term:Terminal)
         WHERE term.id = term_id AND (t2.datetime.year = date().year AND t2.datetime.month = date().month) AND t2.amount > 1.2*prev_month_avg
