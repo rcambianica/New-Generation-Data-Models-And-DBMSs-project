@@ -1,0 +1,5 @@
+Period,Num_Transactions,Num_Fraud_Transactions,Fraud_Rate(%)
+night,147688,11848,8.0223
+morning,427426,33999,7.9544
+afternoon,427248,33749,7.8992
+evening,148008,11809,7.9786

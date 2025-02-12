@@ -22,7 +22,6 @@ def query_a():
         WITH c1, c2, COUNT(DISTINCT term) AS shared_terminals, 
             avg(t1.amount) AS avg_spent_c1, avg(t2.amount) AS avg_spent_c2
         WHERE shared_terminals >= 3
-        AND avg_spent_c1 > 0
         AND ABS(avg_spent_c1 - avg_spent_c2) / avg_spent_c1 < 0.1
         RETURN c1.id, avg_spent_c1, c2.id, avg_spent_c2, shared_terminals
         ORDER BY c1.id
@@ -215,8 +214,8 @@ def query_d_2_batch(tx, data, batch_size=5000):
 def query_d_2():
     # explanation of the query in the report
     query = """
-        MATCH (c1:Customer)-[:MAKES]->(t1:Transaction)-[:OCCURS_AT]->(term:Terminal),
-              (c2:Customer)-[:MAKES]->(t2:Transaction)-[:OCCURS_AT]->(term)
+        MATCH (c1:Customer)-[:MAKES]->(t1:Transaction)-[:OCCURS_AT]->(term:Terminal)
+        MATCH (c2:Customer)-[:MAKES]->(t2:Transaction)-[:OCCURS_AT]->(term)
         WHERE c1.id < c2.id
         WITH c1, c2, COUNT(DISTINCT t1) AS num_transactions_c1,COUNT(DISTINCT t2) AS num_transactions_c2, 
             avg(t1.security_feeling) AS avg_security_feeling_c1, avg(t2.security_feeling) AS avg_security_feeling_c2 
