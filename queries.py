@@ -104,62 +104,50 @@ def query_b():
     driver.close()
 
 
-def query_c(id=0):
+def query_c(customer_id=0, k=3):
+    # explanation of the query in the report
     start_time = time.time()
     try:
         logging.info("Processing query C")
+        co_customers = set()
+
         # execution of the query on the database through the usage of a driver session
         with driver.session() as session:
-            # explanation of the query in the report
-            # Trova i terminali usati dal cliente u
-            query_1 = """
-                MATCH (u:Customer {id: $customer_id})-[:MAKES]->(t1:Transaction)-[:OCCURS_AT]->(term1:Terminal)
-                RETURN DISTINCT term1.id AS terminal_id
+            current_level_customers = {customer_id}
+
+            for _ in range(k):
+                query = """
+                MATCH (u:Customer)-[:MAKES]->(t:Transaction)-[:OCCURS_AT]->(term:Terminal)
+                    <-[:OCCURS_AT]-(t2:Transaction)<-[:MAKES]-(u2:Customer)
+                WHERE u.id IN $current_customers AND u2.id <> u.id AND u2.id <> $u_id
+                RETURN DISTINCT u2.id AS co_customer_id
                 """
+                result = session.run(
+                    query,
+                    u_id=customer_id,
+                    current_customers=list(current_level_customers),
+                )
 
-            terminals_u = session.run(query_1, customer_id=id)
-            terminal_ids = [record["terminal_id"] for record in terminals_u]
+                next_level_customers = {record["co_customer_id"] for record in result}
+                next_level_customers -= co_customers
 
-            # Trova i clienti che hanno usato i terminali di u
-            query_2 = """
-                    MATCH (u:Customer {id: $customer_id})-[:MAKES]->(t1:Transaction)-[:OCCURS_AT]->(term1:Terminal)<-[:OCCURS_AT]-(t2:Transaction)<-[:MAKES]-(u2:Customer)
-                    WHERE term1.id IN $terminal_ids AND u.id <> u2.id
-                    RETURN DISTINCT u2.id AS co_customer_id
-                    """
-            co_customers_u2 = session.run(
-                query_2, customer_id=id, terminal_ids=terminal_ids
-            )
-            co_customers = [record["co_customer_id"] for record in co_customers_u2]
+                if not next_level_customers:
+                    break
 
-            # Trova ulteriori terminali e clienti collegati
-            query_3 = """
-                    MATCH (u2:Customer)-[:MAKES]->(t2:Transaction)-[:OCCURS_AT]->(term2:Terminal)<-[:OCCURS_AT]-(t3:Transaction)<-[:MAKES]-(u3:Customer)
-                    WHERE u2.id IN $co_customers AND u2.id <> u3.id AND u3.id <> $customer_id
-                    RETURN DISTINCT u3.id AS co_customer_id
-                    """
-            co_customers_u3 = session.run(
-                query_3, co_customers=co_customers, customer_id=id
-            )
-            co_customers_final = [
-                record["co_customer_id"] for record in co_customers_u3
-            ]
+                co_customers.update(next_level_customers)
+                current_level_customers = next_level_customers
 
-            file_path = "query_results/C.csv"
+        file_path = "query_results/C.csv"
 
-            # writing query results in a .csv file
-            with open(file_path, mode="w", newline="") as file:
-                writer = csv.writer(file)
-                writer.writerow(["Customer_id", "Cocustomer_id"])
+        # writing query results in a .csv file
+        with open(file_path, mode="w", newline="") as file:
+            writer = csv.writer(file)
+            writer.writerow(["Customer_id", "Cocustomer_ids"])
+            writer.writerow([customer_id, list(co_customers)[0]])
+            for i in range(1, len(co_customers)):
+                writer.writerow(["", list(co_customers)[i]])
 
-                for coid in co_customers_final:
-                    writer.writerow(
-                        [
-                            id,
-                            coid,
-                        ]
-                    )
-
-            logging.info("Results written to C.csv")
+        logging.info("Results written to C.csv")
 
     except Exception as e:
         logging.error(f'Error "{e}" while processing query C')
